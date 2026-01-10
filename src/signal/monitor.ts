@@ -123,19 +123,20 @@ type SignalReactionTarget = {
   kind: "phone" | "uuid";
   id: string;
   display: string;
+  phone?: string;
 };
 
 function resolveSignalReactionTarget(
   reaction: SignalReactionMessage,
 ): SignalReactionTarget | null {
+  const author = reaction.targetAuthor?.trim();
+  const phone = author ? normalizeE164(author) : undefined;
   const uuid = reaction.targetAuthorUuid?.trim();
   if (uuid) {
-    return { kind: "uuid", id: uuid, display: `uuid:${uuid}` };
+    return { kind: "uuid", id: uuid, display: `uuid:${uuid}`, phone };
   }
-  const author = reaction.targetAuthor?.trim();
-  if (!author) return null;
-  const normalized = normalizeE164(author);
-  return { kind: "phone", id: normalized, display: normalized };
+  if (!phone) return null;
+  return { kind: "phone", id: phone, display: phone, phone };
 }
 
 function shouldEmitSignalReactionNotification(params: {
@@ -151,10 +152,14 @@ function shouldEmitSignalReactionNotification(params: {
   if (effectiveMode === "own") {
     const accountId = account?.trim();
     if (!accountId || !target) return false;
+    const normalizedAccount = normalizeE164(accountId);
+    if (target.phone && normalizedAccount === target.phone) {
+      return true;
+    }
     if (target.kind === "uuid") {
       return accountId === target.id || accountId === `uuid:${target.id}`;
     }
-    return normalizeE164(accountId) === target.id;
+    return normalizedAccount === target.id;
   }
   if (effectiveMode === "allowlist") {
     if (!sender || !allowlist || allowlist.length === 0) return false;
