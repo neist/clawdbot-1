@@ -153,13 +153,16 @@ function shouldEmitSignalReactionNotification(params: {
     const accountId = account?.trim();
     if (!accountId || !target) return false;
     const normalizedAccount = normalizeE164(accountId);
-    if (target.phone && normalizedAccount === target.phone) {
-      return true;
-    }
+    const phoneMatches =
+      target.phone !== undefined && normalizedAccount === target.phone;
     if (target.kind === "uuid") {
-      return accountId === target.id || accountId === `uuid:${target.id}`;
+      return (
+        phoneMatches ||
+        accountId === target.id ||
+        accountId === `uuid:${target.id}`
+      );
     }
-    return normalizedAccount === target.id;
+    return phoneMatches || normalizedAccount === target.id;
   }
   if (effectiveMode === "allowlist") {
     if (!sender || !allowlist || allowlist.length === 0) return false;
