@@ -67,6 +67,7 @@ type SignalDataMessage = {
     groupName?: string | null;
   } | null;
   quote?: { text?: string | null } | null;
+  reaction?: SignalReactionMessage | null;
 };
 
 type SignalAttachment = {
@@ -394,8 +395,14 @@ export async function monitorSignalProvider(
       }
       const dataMessage =
         envelope.dataMessage ?? envelope.editMessage?.dataMessage;
-      if (envelope.reactionMessage && !dataMessage) {
-        const reaction = envelope.reactionMessage;
+      const reaction =
+        envelope.reactionMessage ?? dataMessage?.reaction ?? null;
+      const messageText = (dataMessage?.message ?? "").trim();
+      const quoteText = dataMessage?.quote?.text?.trim() ?? "";
+      const hasBodyContent =
+        Boolean(messageText || quoteText) ||
+        Boolean(!reaction && dataMessage?.attachments?.length);
+      if (reaction && !hasBodyContent) {
         if (reaction.isRemove) return; // Ignore reaction removals
         const emojiLabel = reaction.emoji?.trim() || "emoji";
         const senderDisplay = formatSignalSenderDisplay(sender);
@@ -541,7 +548,6 @@ export async function monitorSignalProvider(
           ? isSignalSenderAllowed(sender, effectiveGroupAllow)
           : true
         : dmAllowed;
-      const messageText = (dataMessage.message ?? "").trim();
 
       let mediaPath: string | undefined;
       let mediaType: string | undefined;
